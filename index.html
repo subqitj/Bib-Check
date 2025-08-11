@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BIB Check-in</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            text-align: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        #result {
+            margin-top: 20px;
+        }
+        #bibNumberDisplay {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #007bff;
+            margin: 0;
+        }
+        #nameDisplay {
+            font-size: 2rem;
+            color: #555;
+            margin: 0;
+        }
+        #scanner-video {
+            width: 100%;
+            height: auto;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Silakan Scan BIB Anda</h1>
+        <video id="scanner-video" playsinline></video>
+        <div id="result">
+            <p id="bibNumberDisplay"></p>
+            <p id="nameDisplay"></p>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwoaqqSFXvs9yNtKsoG_Z4x3asBUvzNdUAm70wbJNqmc_-O3teOd7gC-LImFWpe04Sp/exec';
+        const bibNumberDisplay = document.getElementById('bibNumberDisplay');
+        const nameDisplay = document.getElementById('nameDisplay');
+
+        // --- SOLUSI PERBAIKAN DI SINI ---
+        // Memberi tahu library di mana letak file worker-nya
+        QrScanner.workerScriptPath = 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner-worker.min.js';
+        // --- AKHIR SOLUSI ---
+        
+        const videoElem = document.getElementById('scanner-video');
+        const qrScanner = new QrScanner(videoElem, result => onScanSuccess(result.data), {
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
+        });
+
+        // Function untuk memulai scanner
+        function startScanner() {
+            qrScanner.start().catch(error => {
+                console.error('Failed to start scanner:', error);
+                bibNumberDisplay.innerText = 'Error';
+                nameDisplay.innerText = 'Gagal memulai kamera. Mohon cek izin kamera.';
+            });
+        }
+        
+        // Memulai scanner saat halaman dimuat
+        startScanner();
+
+        function onScanSuccess(decodedText) {
+            console.log(`Code matched = ${decodedText}`);
+            // Menghentikan scanner setelah berhasil scan
+            qrScanner.stop(); 
+            
+            fetch(`${API_URL}?bib=${decodedText}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.name) {
+                        bibNumberDisplay.innerText = data.bib_number;
+                        nameDisplay.innerText = data.name;
+                    } else {
+                        bibNumberDisplay.innerText = 'BIB tidak ditemukan';
+                        nameDisplay.innerText = '';
+                    }
+                    // Setelah menampilkan hasil, scanner bisa dimulai lagi
+                    // jika diperlukan, misalnya dengan tombol
+                    // startScanner();
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    bibNumberDisplay.innerText = 'Error';
+                    nameDisplay.innerText = 'Gagal memuat data';
+                });
+        }
+    </script>
+</body>
+</html>
